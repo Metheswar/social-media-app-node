@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Media App</title>
+</head>
+<body>
+  <h1>Social Media App</h1>
+
+  <form id="postForm">
+    <label for="imageUrl">Image URL:</label>
+    <input type="text" id="imageUrl" name="imageUrl" required>
+    <br>
+    <label for="description">Description:</label>
+    <input type="text" id="description" name="description" required>
+    <br>
+    <button type="button" onclick="submitPost()">Post</button>
+  </form>
+
+  <div id="posts">
+    
+  </div>
+
+  <script>
+    async function fetchPosts() {
+      try {
+        const response = await fetch('/posts');
+        const posts = await response.json();
+
+        const postsContainer = document.getElementById('posts');
+        postsContainer.innerHTML = '';
+
+        posts.forEach(post => {
+          const postElement = document.createElement('div');
+          postElement.innerHTML = `
+            <img src="${post.imageUrl}" alt="Post Image" style="max-width: 200px;">
+            <p>${post.description}</p>
+            <button onclick="showComments(${post.id})">Comment</button>
+            <div id="comments-${post.id}"></div>
+          `;
+          postsContainer.appendChild(postElement);
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async function submitPost() {
+      try {
+        const imageUrl = document.getElementById('imageUrl').value;
+        const description = document.getElementById('description').value;
+
+        const response = await fetch('/post', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ imageUrl, description }),
+        });
+
+        if (response.ok) {
+          const newPost = await response.json();
+          fetchPosts();
+        } else {
+          console.error('Failed to submit post');
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async function showComments(postId) {
+      try {
+        const commentsContainer = document.getElementById(`comments-${postId}`);
+        const response = await fetch(`/comment/${postId}`);
+        const comments = await response.json();
+
+        commentsContainer.innerHTML = '';
+
+        comments.forEach(comment => {
+          const commentElement = document.createElement('p');
+          commentElement.textContent = comment.text;
+          commentsContainer.appendChild(commentElement);
+        });
+
+        const commentInput = document.createElement('input');
+        const submitButton = document.createElement('button');
+
+        commentInput.type = 'text';
+        submitButton.textContent = 'Submit Comment';
+        submitButton.onclick = async () => {
+          try {
+            const commentText = commentInput.value;
+            const response = await fetch(`/comment/${postId}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ comment: commentText }),
+            });
+
+            if (response.ok) {
+              const newComment = await response.json();
+              const commentElement = document.createElement('p');
+              commentElement.textContent = newComment.text;
+              commentsContainer.appendChild(commentElement);
+            } else {
+              console.error('Failed to submit comment');
+            }
+          } catch (error) {
+            console.error(error);
+          }
+        };
+
+        commentsContainer.appendChild(commentInput);
+        commentsContainer.appendChild(submitButton);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+   
+    fetchPosts();
+  </script>
+</body>
+</html>
